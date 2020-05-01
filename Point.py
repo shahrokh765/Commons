@@ -1,60 +1,127 @@
 import math
 from collections import namedtuple
+# from typing import NamedTuple
+
+CartesianPoint = namedtuple('CartesianPoint', ('x', 'y'))
+PolarPoint = namedtuple('PolarPoint', ('r', 'theta'))
+GeographicPoint = namedtuple('GeographicPoint', ('lat', 'lon'))
+# TODO move these two to commons
 
 
 class Point:
-    _x = 0.0
-    _y = 0.0
-    _r = 0.0
-    _theta = 0.0
-    p = namedtuple('pp', ('x', 'y'))
+    """Creating Point object. Argument of constructor can be one of CartesianPoint, PolarPoint, or a tuple.
+    In case of tuple, it's assumed as a CartesianPoint"""
+    def __init__(self, point):
+        if isinstance(point, CartesianPoint):
+            self.__cartesian = point
+            self.__polar = self.__to_polar(point)
+        elif isinstance(point, PolarPoint):
+            self.__polar = point
+            self.cartesian = self.__to_cartesian(point)
+        elif isinstance(point, tuple) and len(point) == 2:
+            self.__cartesian = CartesianPoint(point[0], point[1])
+            self.__polar = self.__to_polar(self.__cartesian)
+        # self.get_cartesian = self.get_cartesian()
 
-    def __init__(self, x=0, y=0):
-        self._x = round(x, 2)
-        self._y = round(y,2)
-        self._polar(x, y)
-        self.get_cartesian = self.get_cartesian()
-
-
-    def _polar(self, x, y):
-        self._r = math.sqrt(x**2 + y**2)
-        if y == 0:
-            self._theta = 0
-            return
+    @staticmethod
+    def __to_polar(cartesian_point: CartesianPoint) -> PolarPoint:
+        x, y = cartesian_point.x, cartesian_point.y
+        r = math.sqrt(x ** 2 + y ** 2)
         if x == 0:
-            self._theta = math.atan(float('inf'))
-            return
-        self._theta = math.atan(y/x)
+            theta = math.atan(float('inf'))
+        else:
+            theta = math.atan(y / x)
+        return PolarPoint(r, theta)
 
-    def _cartesian(self, r, theta):
-        self._x = r * math.sin(theta)
-        self._y = r * math.cos(theta)
+    @staticmethod
+    def __to_cartesian(polar_point: PolarPoint) -> CartesianPoint:
+        return CartesianPoint(polar_point.r * math.cos(polar_point.theta),
+                              polar_point.r * math.sin(polar_point.theta))
 
-    def set_polar(self, r, theta):
-        self._r = r
-        self._theta = theta
-        self._cartesian(r, theta)
+    @property
+    def cartesian(self) -> CartesianPoint:
+        """Return cartesian information accessed by x and y"""
+        return self.__cartesian
 
-    def set_cartesian(self, x, y):
-        self._x = x
-        self._y = y
-        self._polar(x, y)
+    @property
+    def polar(self) -> PolarPoint:
+        """Return polar information accessed by r and theta"""
+        return self.__polar
 
-    def get_cartesian(self):
-        # self.pp(self._y, self._y)
-        return self._x, self._y
+    @polar.setter
+    def polar(self, point: PolarPoint):
+        self.__polar = point
+        self.__cartesian = self.__to_cartesian(point)
 
-    def get_polar(self):
-        return self._r, self._theta
+    @cartesian.setter
+    def cartesian(self, point: CartesianPoint):
+        self.__cartesian = point
+        self.__polar = self.__to_polar(point)
 
-    def distance(self, point):
-        return math.sqrt(pow(self._x - point._x,2) + pow(self._y - point._y, 2))
+    def set(self, other: 'Point'):
+        """Replace self with other"""
+        self.__polar = other.polar
+        self.__cartesian = other.cartesian
 
-    def add(self, point):
-        return Point(self._x + point._x, self._y + point._y)
+    def distance(self, other: 'Point') -> float:
+        """Return distance between self and other"""
+        return math.sqrt(pow(self.cartesian.x - other.cartesian.x, 2) + pow(self.cartesian.y - other.cartesian.y, 2))
 
-    def add_polar(self, r, theta):
-        return Point(self._x + r * math.cos(theta), self._y + r * math.sin(theta))
+    def add(self, other: 'Point') -> 'Point':
+        """Return a new Point from adding two pints self and other.
+        This does not set self with new values. To set use set functions."""
+        return Point(CartesianPoint(self.cartesian.x + other.cartesian.x, self.cartesian.y + other.cartesian.y))
 
-    def to_string(self):
-        return "(" + str(self._x) + ", " + str(self._y) + ")"
+    def add_polar(self, other: PolarPoint) -> 'Point':
+        """Return a new Point from adding self and a polar point.
+        This does not set self with new values. To set use set functions."""
+        return Point(CartesianPoint(self.cartesian.x + other.r * math.cos(other.theta),
+                     self.cartesian.y + other.r * math.sin(other.theta)))
+
+    def add_cartesian(self, other: CartesianPoint) -> 'Point':
+        """Return a new Point from adding self and a cartesian point.
+        This does not set self with new values. To set use set functions."""
+        return Point(CartesianPoint(self.cartesian.x + other.x, self.cartesian.y + other.y))
+
+    def __add__(self, other):
+        """Return a new Point from adding two pints self and other.
+        This does not set self with new values. To set use set functions."""
+        return Point(CartesianPoint(self.cartesian.x + other.cartesian.x, self.cartesian.y + other.cartesian.y))
+
+    def __sub__(self, other):
+        """Return a new Point from adding two pints self and other.
+        This does not set self with new values. To set use set functions."""
+        return Point(CartesianPoint(self.cartesian.x - other.cartesian.x, self.cartesian.y - other.cartesian.y))
+
+    def __mul__(self, mul: int):
+        """Return a new Point from multiplication of self and an integer.
+        This does not set self with new values. To set use set functions."""
+        return Point(CartesianPoint(self.cartesian.x * mul, self.cartesian.y * mul))
+
+    def __str__(self):
+        return "{x},{y}".format(x=self.cartesian.x, y=self.cartesian.y)
+
+
+def to_geographic(ref: GeographicPoint, point: Point) -> GeographicPoint:
+    """ get location in (lat, lon) format when x and y is present"""
+    offset = GeographicPoint(-1/111111, -1/111111)  # offset for one meter that should be added to upper_left_loc
+    return GeographicPoint(ref.lat + point.cartesian.y * offset.lat, ref.lon + point.cartesian.x * offset.lon /
+                           math.cos(math.radians(ref.lat + point.cartesian.y * offset.lat)))
+
+
+if __name__ == "__main__":
+    print(10*Point((1, 2)).distance(Point((1, 5))))
+    print(Point((1, 3)))
+    p = Point(CartesianPoint(0, 1))
+    pp = Point(CartesianPoint(3, 4))
+    ppp = pp * 50
+    print(ppp)
+    print(p - pp)
+    print(p)
+    print(p.polar)
+    print(p.add_cartesian(CartesianPoint(4, 5)))
+    # print(p.add_polar(Point(1, 2)))
+    p.set(p.add(Point(CartesianPoint(4.3, 5.5))))
+    print(p)
+    # print(p.add_polar(Point(1, 2)))
+    # print(p.set(p.add_polar(1)))
