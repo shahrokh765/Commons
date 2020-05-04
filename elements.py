@@ -23,8 +23,14 @@ class Element:
     def location(self, location: float):
         self.__loc = location
 
-    def __mul__(self, mul: int):
+    def __mul__(self, mul: float):
         return Element(self.location * mul, self.height)
+
+    def __add__(self, add: Point):
+        return Element(self.location + add, self.height)
+
+    def __sub__(self, sub: Point):
+        return Element(self.location - sub, self.height)
 
     def __str__(self):
         return "location=({loc})\nheight={height}".format(loc=self.location, height=self.height)

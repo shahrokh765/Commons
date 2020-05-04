@@ -93,7 +93,7 @@ class Point:
         This does not set self with new values. To set use set functions."""
         return Point(CartesianPoint(self.cartesian.x - other.cartesian.x, self.cartesian.y - other.cartesian.y))
 
-    def __mul__(self, mul: int):
+    def __mul__(self, mul: float):
         """Return a new Point from multiplication of self and an integer.
         This does not set self with new values. To set use set functions."""
         return Point(CartesianPoint(self.cartesian.x * mul, self.cartesian.y * mul))
